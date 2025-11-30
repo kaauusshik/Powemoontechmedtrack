@@ -1,5 +1,15 @@
 import { useState, useEffect } from "react";
-import { FileText, Users, Plus, Moon, Sun, Trash2, Edit, X, LogOut } from "lucide-react";
+import {
+  FileText,
+  Users,
+  Plus,
+  Moon,
+  Sun,
+  Trash2,
+  Edit,
+  X,
+  LogOut,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthContext } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -39,9 +49,15 @@ export default function Index() {
   // Add Employee Modal
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
   const [showEditEmployeeModal, setShowEditEmployeeModal] = useState(false);
-  const [showDeleteEmployeeConfirm, setShowDeleteEmployeeConfirm] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [employeeFormData, setEmployeeFormData] = useState({ name: "", position: "" });
+  const [showDeleteEmployeeConfirm, setShowDeleteEmployeeConfirm] =
+    useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
+    null
+  );
+  const [employeeFormData, setEmployeeFormData] = useState({
+    name: "",
+    position: "",
+  });
 
   // Add Record Modal
   const [showAddRecordModal, setShowAddRecordModal] = useState(false);
@@ -186,7 +202,14 @@ export default function Index() {
     setShowAddRecordModal(true);
   };
 
-  const expenseCategories = ["Fuel", "Bonus", "Food", "Medical", "Equipments", "Other"];
+  const expenseCategories = [
+    "Fuel",
+    "Bonus",
+    "Food",
+    "Medical",
+    "Equipments",
+    "Other",
+  ];
 
   const addExpense = () => {
     if (!expenseAmount.trim()) {
@@ -205,7 +228,8 @@ export default function Index() {
       return;
     }
 
-    const finalCategory = expenseCategory === "Other" ? customExpenseCategory : expenseCategory;
+    const finalCategory =
+      expenseCategory === "Other" ? customExpenseCategory : expenseCategory;
 
     const newExpense: Expense = {
       id: Date.now().toString(),
@@ -311,7 +335,7 @@ export default function Index() {
   const calculateGrandTotal = () => {
     const salary = parseFloat(recordSalary) || 0;
     const expensesTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
-    return salary + expensesTotal;
+    return salary - expensesTotal;
   };
 
   const currentYear = new Date().getFullYear();
@@ -333,7 +357,9 @@ export default function Index() {
   ];
 
   return (
-    <div className={`${isDark ? "dark" : ""} min-h-screen bg-slate-50 dark:bg-slate-950 py-4 px-3 sm:py-8 sm:px-4`}>
+    <div
+      className={`${isDark ? "dark" : ""} min-h-screen bg-slate-50 dark:bg-slate-950 py-4 px-3 sm:py-8 sm:px-4`}
+    >
       <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Card */}
         <div className="bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-8">
@@ -358,7 +384,11 @@ export default function Index() {
                 onClick={toggleDarkMode}
                 className="rounded-full bg-gray-100 dark:bg-slate-800 p-2 sm:p-3 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
-                {isDark ? <Sun className="w-5 h-5 sm:w-6 sm:h-6" /> : <Moon className="w-5 h-5 sm:w-6 sm:h-6" />}
+                {isDark ? (
+                  <Sun className="w-5 h-5 sm:w-6 sm:h-6" />
+                ) : (
+                  <Moon className="w-5 h-5 sm:w-6 sm:h-6" />
+                )}
               </button>
               <button
                 onClick={handleLogout}
@@ -468,14 +498,20 @@ export default function Index() {
                   className="p-4 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
                 >
                   <div className="mb-3">
-                    <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">Name</p>
+                    <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+                      Name
+                    </p>
                     <p className="text-base font-bold text-gray-900 dark:text-gray-100">
                       {employee.name}
                     </p>
                   </div>
                   <div className="mb-4">
-                    <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">Position</p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">{employee.position}</p>
+                    <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+                      Position
+                    </p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      {employee.position}
+                    </p>
                   </div>
                   <div className="flex gap-2 pt-2 border-t border-gray-200 dark:border-slate-700">
                     <button
@@ -694,7 +730,10 @@ export default function Index() {
                   type="text"
                   value={employeeFormData.name}
                   onChange={(e) =>
-                    setEmployeeFormData({ ...employeeFormData, name: e.target.value })
+                    setEmployeeFormData({
+                      ...employeeFormData,
+                      name: e.target.value,
+                    })
                   }
                   placeholder="Employee name"
                   className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
@@ -758,7 +797,10 @@ export default function Index() {
                   type="text"
                   value={employeeFormData.name}
                   onChange={(e) =>
-                    setEmployeeFormData({ ...employeeFormData, name: e.target.value })
+                    setEmployeeFormData({
+                      ...employeeFormData,
+                      name: e.target.value,
+                    })
                   }
                   placeholder="Employee name"
                   className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
@@ -814,8 +856,9 @@ export default function Index() {
               Delete Employee
             </h2>
             <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
-              Are you sure you want to delete <strong>{selectedEmployee.name}</strong>? This
-              action cannot be undone.
+              Are you sure you want to delete{" "}
+              <strong>{selectedEmployee.name}</strong>? This action cannot be
+              undone.
             </p>
 
             <div className="flex flex-col-reverse sm:flex-row gap-3">
@@ -965,7 +1008,9 @@ export default function Index() {
                       <input
                         type="text"
                         value={customExpenseCategory}
-                        onChange={(e) => setCustomExpenseCategory(e.target.value)}
+                        onChange={(e) =>
+                          setCustomExpenseCategory(e.target.value)
+                        }
                         placeholder="e.g., Travel, Utilities, Software"
                         className="w-full px-4 py-2 border border-blue-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
@@ -994,19 +1039,25 @@ export default function Index() {
                     <div className="grid grid-cols-3 gap-2">
                       <select
                         value={expenseDay}
-                        onChange={(e) => setExpenseDay(parseInt(e.target.value))}
+                        onChange={(e) =>
+                          setExpenseDay(parseInt(e.target.value))
+                        }
                         className="px-3 py-2 border border-blue-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       >
-                        {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                          <option key={day} value={day}>
-                            {day}
-                          </option>
-                        ))}
+                        {Array.from({ length: 31 }, (_, i) => i + 1).map(
+                          (day) => (
+                            <option key={day} value={day}>
+                              {day}
+                            </option>
+                          )
+                        )}
                       </select>
 
                       <select
                         value={expenseMonth}
-                        onChange={(e) => setExpenseMonth(parseInt(e.target.value))}
+                        onChange={(e) =>
+                          setExpenseMonth(parseInt(e.target.value))
+                        }
                         className="px-3 py-2 border border-blue-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       >
                         {monthNames.map((month, idx) => (
@@ -1018,14 +1069,18 @@ export default function Index() {
 
                       <select
                         value={expenseYear}
-                        onChange={(e) => setExpenseYear(parseInt(e.target.value))}
+                        onChange={(e) =>
+                          setExpenseYear(parseInt(e.target.value))
+                        }
                         className="px-3 py-2 border border-blue-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       >
-                        {[expenseYear - 1, expenseYear, expenseYear + 1].map((year) => (
-                          <option key={year} value={year}>
-                            {year}
-                          </option>
-                        ))}
+                        {[expenseYear - 1, expenseYear, expenseYear + 1].map(
+                          (year) => (
+                            <option key={year} value={year}>
+                              {year}
+                            </option>
+                          )
+                        )}
                       </select>
                     </div>
                   </div>
@@ -1042,7 +1097,8 @@ export default function Index() {
                 {expenses.length > 0 && (
                   <div className="space-y-3 mb-4">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                      {expenses.length} Expense{expenses.length !== 1 ? "s" : ""} Added
+                      {expenses.length} Expense
+                      {expenses.length !== 1 ? "s" : ""} Added
                     </p>
                     {expenses.map((expense, idx) => {
                       const dateStr = `${expense.day} ${monthNames[expense.month]} ${expense.year}`;
@@ -1087,10 +1143,14 @@ export default function Index() {
               {/* Grand Total */}
               <div className="border-t border-gray-200 dark:border-slate-700 pt-4 bg-green-50 dark:bg-green-900 p-4 rounded-lg">
                 <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  <p>Salary: ₹{(parseFloat(recordSalary) || 0).toLocaleString()}</p>
+                  <p>
+                    Salary: ₹{(parseFloat(recordSalary) || 0).toLocaleString()}
+                  </p>
                   <p>
                     Expenses: ₹
-                    {expenses.reduce((sum, e) => sum + e.amount, 0).toLocaleString()}
+                    {expenses
+                      .reduce((sum, e) => sum + e.amount, 0)
+                      .toLocaleString()}
                   </p>
                 </div>
                 <p className="text-2xl font-bold text-green-600 dark:text-green-400">
