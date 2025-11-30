@@ -14,29 +14,20 @@ import { Button } from "@/components/ui/button";
 import { useAuthContext } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-
-interface Employee {
-  id: string;
-  name: string;
-  position: string;
-}
+import {
+  employeeService,
+  salaryRecordService,
+  Employee,
+  SalaryRecordWithExpenses,
+} from "@/lib/db";
 
 interface Expense {
   id: string;
   category: string;
   amount: number;
-  day: number;
-  month: number;
-  year: number;
-}
-
-interface SalaryRecord {
-  id: string;
-  employeeId: string;
-  month: number;
-  year: number;
-  salary: number;
-  expenses: Expense[];
+  expense_day: number;
+  expense_month: number;
+  expense_year: number;
 }
 
 export default function Index() {
@@ -44,22 +35,18 @@ export default function Index() {
   const navigate = useNavigate();
   const [isDark, setIsDark] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [salaryRecords, setSalaryRecords] = useState<SalaryRecord[]>([]);
+  const [salaryRecords, setSalaryRecords] = useState<SalaryRecordWithExpenses[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
-  // Add Employee Modal
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
   const [showEditEmployeeModal, setShowEditEmployeeModal] = useState(false);
-  const [showDeleteEmployeeConfirm, setShowDeleteEmployeeConfirm] =
-    useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
-    null
-  );
+  const [showDeleteEmployeeConfirm, setShowDeleteEmployeeConfirm] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [employeeFormData, setEmployeeFormData] = useState({
     name: "",
     position: "",
   });
 
-  // Add Record Modal
   const [showAddRecordModal, setShowAddRecordModal] = useState(false);
   const [selectedRecordEmployeeId, setSelectedRecordEmployeeId] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -73,32 +60,33 @@ export default function Index() {
   const [expenseMonth, setExpenseMonth] = useState(new Date().getMonth());
   const [expenseYear, setExpenseYear] = useState(new Date().getFullYear());
 
-  // Load data from localStorage on mount
+  const loadData = async () => {
+    if (!user) return;
+
+    try {
+      setIsLoadingData(true);
+      const [employeesData, recordsData] = await Promise.all([
+        employeeService.getAll(user.id),
+        salaryRecordService.getAll(user.id),
+      ]);
+      setEmployees(employeesData);
+      setSalaryRecords(recordsData);
+    } catch (error) {
+      console.error("Failed to load data:", error);
+      toast.error("Failed to load data");
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
   useEffect(() => {
-    const storedEmployees = localStorage.getItem("employees");
-    if (storedEmployees) {
-      setEmployees(JSON.parse(storedEmployees));
-    }
-    const storedRecords = localStorage.getItem("salaryRecords");
-    if (storedRecords) {
-      setSalaryRecords(JSON.parse(storedRecords));
-    }
+    loadData();
     const darkMode = localStorage.getItem("darkMode");
     if (darkMode === "true") {
       setIsDark(true);
       document.documentElement.classList.add("dark");
     }
-  }, []);
-
-  // Save employees to localStorage
-  useEffect(() => {
-    localStorage.setItem("employees", JSON.stringify(employees));
-  }, [employees]);
-
-  // Save salary records to localStorage
-  useEffect(() => {
-    localStorage.setItem("salaryRecords", JSON.stringify(salaryRecords));
-  }, [salaryRecords]);
+  }, [user]);
 
   const toggleDarkMode = () => {
     const newDark = !isDark;
@@ -117,7 +105,6 @@ export default function Index() {
     navigate("/auth");
   };
 
-  // Employee Management Functions
   const handleAddEmployee = () => {
     setEmployeeFormData({ name: "", position: "" });
     setSelectedEmployee(null);
@@ -138,52 +125,55 @@ export default function Index() {
     setShowDeleteEmployeeConfirm(true);
   };
 
-  const confirmDeleteEmployee = () => {
-    if (selectedEmployee) {
-      setEmployees(employees.filter((e) => e.id !== selectedEmployee.id));
-      setSalaryRecords(
-        salaryRecords.filter((r) => r.employeeId !== selectedEmployee.id)
-      );
+  const confirmDeleteEmployee = async () => {
+    if (!selectedEmployee || !user) return;
+
+    try {
+      await employeeService.delete(user.id, selectedEmployee.id);
+      await loadData();
       toast.success("Employee deleted successfully");
       setShowDeleteEmployeeConfirm(false);
       setSelectedEmployee(null);
+    } catch (error) {
+      toast.error("Failed to delete employee");
     }
   };
 
-  const submitEmployeeForm = () => {
+  const submitEmployeeForm = async () => {
     if (!employeeFormData.name.trim() || !employeeFormData.position.trim()) {
       toast.error("Please fill in all fields");
       return;
     }
 
-    if (showEditEmployeeModal && selectedEmployee) {
-      const updated = employees.map((e) =>
-        e.id === selectedEmployee.id
-          ? {
-              ...e,
-              name: employeeFormData.name,
-              position: employeeFormData.position,
-            }
-          : e
-      );
-      setEmployees(updated);
-      toast.success("Employee updated successfully");
-      setShowEditEmployeeModal(false);
-    } else {
-      const newEmployee: Employee = {
-        id: Date.now().toString(),
-        name: employeeFormData.name,
-        position: employeeFormData.position,
-      };
-      setEmployees([...employees, newEmployee]);
-      toast.success("Employee added successfully");
-      setShowAddEmployeeModal(false);
+    if (!user) return;
+
+    try {
+      if (showEditEmployeeModal && selectedEmployee) {
+        await employeeService.update(
+          user.id,
+          selectedEmployee.id,
+          employeeFormData.name,
+          employeeFormData.position
+        );
+        toast.success("Employee updated successfully");
+        setShowEditEmployeeModal(false);
+      } else {
+        await employeeService.create(
+          user.id,
+          employeeFormData.name,
+          employeeFormData.position
+        );
+        toast.success("Employee added successfully");
+        setShowAddEmployeeModal(false);
+      }
+      await loadData();
+      setEmployeeFormData({ name: "", position: "" });
+      setSelectedEmployee(null);
+    } catch (error) {
+      toast.error("Failed to save employee");
     }
-    setEmployeeFormData({ name: "", position: "" });
-    setSelectedEmployee(null);
   };
 
-  // Salary Record Functions
   const handleAddRecord = () => {
     if (employees.length === 0) {
       toast.error("Please add an employee first");
@@ -235,9 +225,9 @@ export default function Index() {
       id: Date.now().toString(),
       category: finalCategory,
       amount,
-      day: expenseDay,
-      month: expenseMonth,
-      year: expenseYear,
+      expense_day: expenseDay,
+      expense_month: expenseMonth,
+      expense_year: expenseYear,
     };
 
     setExpenses([...expenses, newExpense]);
@@ -249,7 +239,7 @@ export default function Index() {
     setExpenses(expenses.filter((e) => e.id !== id));
   };
 
-  const submitSalaryRecord = () => {
+  const submitSalaryRecord = async () => {
     if (!selectedRecordEmployeeId) {
       toast.error("Please select an employee");
       return;
@@ -266,48 +256,31 @@ export default function Index() {
       return;
     }
 
-    // Check if record for this employee, month, and year already exists
-    const existingRecord = salaryRecords.find(
-      (r) =>
-        r.employeeId === selectedRecordEmployeeId &&
-        r.month === selectedMonth &&
-        r.year === selectedYear
-    );
+    if (!user) return;
 
-    if (existingRecord) {
-      // Update existing record
-      const updated = salaryRecords.map((r) =>
-        r.id === existingRecord.id
-          ? {
-              ...r,
-              salary,
-              expenses,
-            }
-          : r
-      );
-      setSalaryRecords(updated);
-      toast.success("Salary record updated successfully");
-    } else {
-      // Create new record
-      const newRecord: SalaryRecord = {
-        id: Date.now().toString(),
-        employeeId: selectedRecordEmployeeId,
-        month: selectedMonth,
-        year: selectedYear,
+    try {
+      await salaryRecordService.create(
+        user.id,
+        selectedRecordEmployeeId,
+        selectedMonth,
+        selectedYear,
         salary,
-        expenses,
-      };
-      setSalaryRecords([...salaryRecords, newRecord]);
-      toast.success("Salary record added successfully");
+        expenses.map(e => ({
+          category: e.category,
+          amount: e.amount,
+          expense_day: e.expense_day,
+          expense_month: e.expense_month,
+          expense_year: e.expense_year,
+        }))
+      );
+      await loadData();
+      toast.success("Salary record saved successfully");
+      setShowAddRecordModal(false);
+      setExpenses([]);
+      setExpenseAmount("");
+    } catch (error) {
+      toast.error("Failed to save salary record");
     }
-
-    setShowAddRecordModal(false);
-    setExpenseAmount("");
-    setExpenseDay(new Date().getDate());
-    setExpenseMonth(new Date().getMonth());
-    setExpenseYear(new Date().getFullYear());
-    setExpenseCategory("Fuel");
-    setCustomExpenseCategory("");
   };
 
   const getEmployeeName = (employeeId: string) => {
@@ -335,7 +308,7 @@ export default function Index() {
   const calculateGrandTotal = () => {
     const salary = parseFloat(recordSalary) || 0;
     const expensesTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
-    return salary - expensesTotal;
+    return salary + expensesTotal;
   };
 
   const currentYear = new Date().getFullYear();
@@ -355,6 +328,17 @@ export default function Index() {
     "Nov",
     "Dec",
   ];
+
+  if (isLoadingData) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -566,148 +550,138 @@ export default function Index() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
-                  {salaryRecords
-                    .sort((a, b) => {
-                      if (a.year !== b.year) return b.year - a.year;
-                      return b.month - a.month;
-                    })
-                    .map((record) => {
-                      const expensesTotal = record.expenses.reduce(
-                        (sum, e) => sum + e.amount,
-                        0
-                      );
-                      const grandTotal = record.salary + expensesTotal;
-                      return (
-                        <tr
-                          key={record.id}
-                          className="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-                        >
-                          <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
-                            {getEmployeeName(record.employeeId)}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                            {getMonthName(record.month)} {record.year}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
-                            ₹{record.salary.toLocaleString()}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                            {record.expenses.length > 0 ? (
-                              <div className="space-y-1">
-                                {record.expenses.map((e) => (
-                                  <div key={e.id} className="text-xs">
-                                    <span className="font-semibold text-gray-900 dark:text-gray-100">
-                                      {e.category}
-                                    </span>
-                                    {" - "}
-                                    <span className="text-gray-600 dark:text-gray-400">
-                                      {e.day} {monthNames[e.month]} {e.year}
-                                    </span>
-                                    {" : "}
-                                    <span className="font-semibold text-gray-900 dark:text-gray-100">
-                                      ₹{e.amount.toLocaleString()}
-                                    </span>
-                                  </div>
-                                ))}
-                                <div className="font-semibold text-blue-600 dark:text-blue-400 border-t border-gray-200 dark:border-slate-700 pt-1 mt-1">
-                                  Subtotal: ₹{expensesTotal.toLocaleString()}
+                  {salaryRecords.map((record) => {
+                    const expensesTotal = record.expenses.reduce(
+                      (sum, e) => sum + e.amount,
+                      0
+                    );
+                    const grandTotal = record.salary + expensesTotal;
+                    return (
+                      <tr
+                        key={record.id}
+                        className="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
+                          {getEmployeeName(record.employee_id)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                          {getMonthName(record.month)} {record.year}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
+                          ₹{record.salary.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                          {record.expenses.length > 0 ? (
+                            <div className="space-y-1">
+                              {record.expenses.map((e) => (
+                                <div key={e.id} className="text-xs">
+                                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                    {e.category}
+                                  </span>
+                                  {" - "}
+                                  <span className="text-gray-600 dark:text-gray-400">
+                                    {e.expense_day} {monthNames[e.expense_month]} {e.expense_year}
+                                  </span>
+                                  {" : "}
+                                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                    ₹{e.amount.toLocaleString()}
+                                  </span>
                                 </div>
+                              ))}
+                              <div className="font-semibold text-blue-600 dark:text-blue-400 border-t border-gray-200 dark:border-slate-700 pt-1 mt-1">
+                                Subtotal: ₹{expensesTotal.toLocaleString()}
                               </div>
-                            ) : (
-                              <span className="text-gray-400">None</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-sm font-semibold text-green-600 dark:text-green-400">
-                            ₹{grandTotal.toLocaleString()}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">None</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-green-600 dark:text-green-400">
+                          ₹{grandTotal.toLocaleString()}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
             {/* Mobile Card Layout */}
             <div className="sm:hidden divide-y divide-gray-200 dark:divide-slate-700">
-              {salaryRecords
-                .sort((a, b) => {
-                  if (a.year !== b.year) return b.year - a.year;
-                  return b.month - a.month;
-                })
-                .map((record) => {
-                  const expensesTotal = record.expenses.reduce(
-                    (sum, e) => sum + e.amount,
-                    0
-                  );
-                  const grandTotal = record.salary + expensesTotal;
-                  return (
-                    <div key={record.id} className="p-4">
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
-                            Employee
-                          </p>
-                          <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                            {getEmployeeName(record.employeeId)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
-                            Month/Year
-                          </p>
-                          <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                            {getMonthName(record.month)} {record.year}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mb-4">
+              {salaryRecords.map((record) => {
+                const expensesTotal = record.expenses.reduce(
+                  (sum, e) => sum + e.amount,
+                  0
+                );
+                const grandTotal = record.salary + expensesTotal;
+                return (
+                  <div key={record.id} className="p-4">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
                         <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
-                          Salary
+                          Employee
                         </p>
-                        <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                          ₹{record.salary.toLocaleString()}
+                        <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                          {getEmployeeName(record.employee_id)}
                         </p>
                       </div>
-
-                      {record.expenses.length > 0 && (
-                        <div className="mb-4 p-3 bg-gray-50 dark:bg-slate-800 rounded-lg">
-                          <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-2">
-                            Expenses
-                          </p>
-                          <div className="space-y-1 text-xs">
-                            {record.expenses.map((e) => (
-                              <div
-                                key={e.id}
-                                className="flex justify-between text-gray-700 dark:text-gray-300"
-                              >
-                                <span>
-                                  {e.category} ({e.day} {monthNames[e.month]})
-                                </span>
-                                <span className="font-semibold">
-                                  ₹{e.amount.toLocaleString()}
-                                </span>
-                              </div>
-                            ))}
-                            <div className="border-t border-gray-200 dark:border-slate-700 pt-1 mt-1 flex justify-between font-semibold text-blue-600 dark:text-blue-400">
-                              <span>Subtotal:</span>
-                              <span>₹{expensesTotal.toLocaleString()}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="p-3 bg-green-50 dark:bg-green-900 rounded-lg">
-                        <p className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase">
-                          Grand Total
+                      <div>
+                        <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
+                          Month/Year
                         </p>
-                        <p className="text-xl font-bold text-green-600 dark:text-green-400">
-                          ₹{grandTotal.toLocaleString()}
+                        <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                          {getMonthName(record.month)} {record.year}
                         </p>
                       </div>
                     </div>
-                  );
-                })}
+
+                    <div className="mb-4">
+                      <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
+                        Salary
+                      </p>
+                      <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                        ₹{record.salary.toLocaleString()}
+                      </p>
+                    </div>
+
+                    {record.expenses.length > 0 && (
+                      <div className="mb-4 p-3 bg-gray-50 dark:bg-slate-800 rounded-lg">
+                        <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-2">
+                          Expenses
+                        </p>
+                        <div className="space-y-1 text-xs">
+                          {record.expenses.map((e) => (
+                            <div
+                              key={e.id}
+                              className="flex justify-between text-gray-700 dark:text-gray-300"
+                            >
+                              <span>
+                                {e.category} ({e.expense_day} {monthNames[e.expense_month]})
+                              </span>
+                              <span className="font-semibold">
+                                ₹{e.amount.toLocaleString()}
+                              </span>
+                            </div>
+                          ))}
+                          <div className="border-t border-gray-200 dark:border-slate-700 pt-1 mt-1 flex justify-between font-semibold text-blue-600 dark:text-blue-400">
+                            <span>Subtotal:</span>
+                            <span>₹{expensesTotal.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="p-3 bg-green-50 dark:bg-green-900 rounded-lg">
+                      <p className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase">
+                        Grand Total
+                      </p>
+                      <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                        ₹{grandTotal.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -1101,7 +1075,7 @@ export default function Index() {
                       {expenses.length !== 1 ? "s" : ""} Added
                     </p>
                     {expenses.map((expense, idx) => {
-                      const dateStr = `${expense.day} ${monthNames[expense.month]} ${expense.year}`;
+                      const dateStr = `${expense.expense_day} ${monthNames[expense.expense_month]} ${expense.expense_year}`;
                       return (
                         <div
                           key={expense.id}

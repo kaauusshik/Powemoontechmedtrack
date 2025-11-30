@@ -1,10 +1,5 @@
 import { createContext, useContext, ReactNode, useState, useEffect } from "react";
-
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-}
+import { authService, User } from "@/lib/db";
 
 interface AuthContextType {
   user: User | null;
@@ -19,7 +14,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_KEY = "auth_user";
-const USERS_KEY = "registered_users";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -49,22 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Email and password are required");
       }
 
-      const usersData = localStorage.getItem(USERS_KEY);
-      const users = usersData ? JSON.parse(usersData) : [];
-
-      const foundUser = users.find(
-        (u: any) => u.email === email && u.password === password
-      );
-
-      if (!foundUser) {
-        throw new Error("Invalid email or password");
-      }
-
-      const loggedInUser: User = {
-        id: foundUser.id,
-        email: foundUser.email,
-        name: foundUser.name,
-      };
+      const loggedInUser = await authService.login(email, password);
 
       setUser(loggedInUser);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(loggedInUser));
@@ -96,28 +75,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Please enter a valid email address");
       }
 
-      const usersData = localStorage.getItem(USERS_KEY);
-      const users = usersData ? JSON.parse(usersData) : [];
-
-      if (users.some((u: any) => u.email === email)) {
-        throw new Error("Email already registered");
-      }
-
-      const newUser = {
-        id: Date.now().toString(),
-        name,
-        email,
-        password,
-      };
-
-      users.push(newUser);
-      localStorage.setItem(USERS_KEY, JSON.stringify(users));
-
-      const loggedInUser: User = {
-        id: newUser.id,
-        email: newUser.email,
-        name: newUser.name,
-      };
+      const loggedInUser = await authService.register(name, email, password);
 
       setUser(loggedInUser);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(loggedInUser));

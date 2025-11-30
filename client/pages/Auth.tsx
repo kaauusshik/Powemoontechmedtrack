@@ -4,33 +4,12 @@ import { useAuthContext } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-const USERS_KEY = "registered_users";
-
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const navigate = useNavigate();
   const { login, register, isLoading, error } = useAuthContext();
-
-  // Initialize demo account on mount
-  useEffect(() => {
-    const usersData = localStorage.getItem(USERS_KEY);
-    const users = usersData ? JSON.parse(usersData) : [];
-
-    // Check if demo account exists
-    const demoExists = users.some((u: any) => u.email === "demo@example.com");
-
-    if (!demoExists) {
-      users.push({
-        id: "demo-user",
-        name: "Demo User",
-        email: "demo@example.com",
-        password: "demo123",
-      });
-      localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    }
-  }, []);
 
   // Login form state
   const [loginData, setLoginData] = useState({
