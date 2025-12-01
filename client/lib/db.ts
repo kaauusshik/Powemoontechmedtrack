@@ -38,13 +38,6 @@ export interface SalaryRecordWithExpenses extends SalaryRecord {
   expenses: Expense[];
 }
 
-const setUserContext = async (userId: string) => {
-  await supabase.rpc('set_config', {
-    setting: 'app.current_user_id',
-    value: userId
-  });
-};
-
 export const authService = {
   async register(name: string, email: string, password: string): Promise<User> {
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -70,7 +63,6 @@ export const authService = {
       throw new Error('Failed to create user');
     }
 
-    await setUserContext(data.id);
     return data;
   },
 
@@ -94,8 +86,6 @@ export const authService = {
       throw new Error('Invalid email or password');
     }
 
-    await setUserContext(data.id);
-
     return {
       id: data.id,
       email: data.email,
@@ -106,8 +96,6 @@ export const authService = {
 
 export const employeeService = {
   async getAll(userId: string): Promise<Employee[]> {
-    await setUserContext(userId);
-
     const { data, error } = await supabase
       .from('employees')
       .select('*')
@@ -122,8 +110,6 @@ export const employeeService = {
   },
 
   async create(userId: string, name: string, position: string): Promise<Employee> {
-    await setUserContext(userId);
-
     const { data, error } = await supabase
       .from('employees')
       .insert({
@@ -142,8 +128,6 @@ export const employeeService = {
   },
 
   async update(userId: string, employeeId: string, name: string, position: string): Promise<Employee> {
-    await setUserContext(userId);
-
     const { data, error } = await supabase
       .from('employees')
       .update({
@@ -163,8 +147,6 @@ export const employeeService = {
   },
 
   async delete(userId: string, employeeId: string): Promise<void> {
-    await setUserContext(userId);
-
     const { error } = await supabase
       .from('employees')
       .delete()
@@ -179,8 +161,6 @@ export const employeeService = {
 
 export const salaryRecordService = {
   async getAll(userId: string): Promise<SalaryRecordWithExpenses[]> {
-    await setUserContext(userId);
-
     const { data: records, error: recordsError } = await supabase
       .from('salary_records')
       .select('*')
@@ -235,8 +215,6 @@ export const salaryRecordService = {
       expense_year: number;
     }>
   ): Promise<SalaryRecordWithExpenses> {
-    await setUserContext(userId);
-
     const { data: existingRecord } = await supabase
       .from('salary_records')
       .select('id')
